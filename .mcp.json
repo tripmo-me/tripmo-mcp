@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tripmo": {
+      "type": "http",
+      "url": "https://app.tripmo.me/mcp"
+    }
+  }
+}
