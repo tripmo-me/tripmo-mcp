@@ -1,12 +1,12 @@
 # Tripmo MCP server reference
 
-> This repository holds the public reference for Tripmo's MCP server. It is the same reference published at [tripmo.me/docs/mcp](https://tripmo.me/docs/mcp). To connect Tripmo to your AI, see [Connect your AI](https://tripmo.me/connect).
+> The reference for Tripmo's MCP server, made from [tripmo.me/docs/mcp](https://tripmo.me/docs/mcp) each time that page changes, so the two always say the same. This repository is also Tripmo's Claude Code plugin. Nothing here is edited by hand: changes go through Tripmo's team (open an issue, or write to [support@tripmo.me](mailto:support@tripmo.me)). To connect Tripmo to your AI, see [Connect your AI](https://tripmo.me/connect).
 
 _Updated 31 Oct 2026_
 
 Tripmo is a shared trip plan for a group, each person planning with their own AI through this server. This reference is for the people who build or review MCP clients: how to connect, the OAuth 2.1 sign-in and its scopes, every tool with its inputs, outputs and side effects, errors and rate limits.
 
-## On this page
+## <a id="toc-title"></a>On this page
 
 1. [The endpoint](#endpoint)
 2. [Sign-in](#sign-in)
@@ -21,9 +21,7 @@ Tripmo is a shared trip plan for a group, each person planning with their own AI
 8. [Your data](#data)
 9. [Support](#support)
 
-<a id="endpoint"></a>
-
-## The endpoint
+## <a id="endpoint"></a>The endpoint
 
 ```text
 https://app.tripmo.me/mcp
@@ -31,36 +29,34 @@ https://app.tripmo.me/mcp
 
 - **Transport**: Streamable HTTP, stateless: every message is its own `POST`, with no session to keep. Ask with `Accept: application/json, text/event-stream`. `GET` and `DELETE` answer 405, since the server opens no stream of its own.
 - **Protocol**: MCP `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`, `2024-10-07`. A client asking for a newer one is answered with `2025-11-25`.
-- **Server**: `tripmo`, titled Tripmo. Its version is the release's commit, in `initialize`'s `serverInfo`. It offers tools only: no resources or prompts.
+- **Server**: `tripmo`, titled Tripmo. Its version is the release’s commit, in `initialize`’s `serverInfo`. It offers tools only: no resources or prompts.
 - **Registry**: `me.tripmo/tripmo` in the official MCP Registry.
-- **Server card**: [`/.well-known/mcp/server-card.json`](https://app.tripmo.me/.well-known/mcp/server-card.json): the server's info and every tool, public, for scanners that stop at the sign-in.
-- **Environment**: One: production. Everything on this page is production's.
+- **Server card**: [`/.well-known/mcp/server-card.json`](https://app.tripmo.me/.well-known/mcp/server-card.json): the server’s info and every tool, public, for scanners that stop at the sign-in.
+- **Environment**: One: production. Everything on this page is production’s.
 
 For a review, reviewers get a test account on production with a complimentary plan and a populated trip, so nothing is charged. Each submission gives its own.
 
-<a id="sign-in"></a>
-
-## Sign-in
+## <a id="sign-in"></a>Sign-in
 
 OAuth 2.1, with the authorization code and PKCE (`S256`). There is no key to copy: the person signs in to Tripmo and allows their AI, and the AI acts as them.
 
 1. A call without a token gets `401` with `WWW-Authenticate: Bearer resource_metadata="https://app.tripmo.me/.well-known/oauth-protected-resource/mcp"`.
 2. The protected resource metadata (RFC 9728) at [`/.well-known/oauth-protected-resource/mcp`](https://app.tripmo.me/.well-known/oauth-protected-resource/mcp) names the authorization server, `https://app.tripmo.me/api/auth`.
-3. Its metadata (RFC 8414) is at [`/.well-known/oauth-authorization-server/api/auth`](https://app.tripmo.me/.well-known/oauth-authorization-server/api/auth), and at the root's `/.well-known/oauth-authorization-server` and `/.well-known/openid-configuration` for older clients.
-4. The client identifies itself with a Client ID Metadata Document (its `client_id` is the https address of the document), or registers itself (RFC 7591) at `/api/auth/oauth2/register`. A public client (`token_endpoint_auth_method: "none"`) may come back to a loopback address on any port or to an app's own scheme; a client with a secret, to https only.
-5. The person signs in with Google (a new person makes their account there, and confirms once that they're 16 or older and agree to the Terms), then sees Tripmo's allow page: “&lt;AI&gt; wants to read and change the trips you’re in, as &lt;name&gt;.” They choose Allow or Don’t allow.
-6. The client exchanges the code at `/api/auth/oauth2/token`. Send `resource=https://app.tripmo.me/mcp` (RFC 8707) when authorizing: without it, the token isn't one `/mcp` accepts.
+3. Its metadata (RFC 8414) is at [`/.well-known/oauth-authorization-server/api/auth`](https://app.tripmo.me/.well-known/oauth-authorization-server/api/auth), and at the root’s `/.well-known/oauth-authorization-server` and `/.well-known/openid-configuration` for older clients.
+4. The client identifies itself with a Client ID Metadata Document (its `client_id` is the https address of the document), or registers itself (RFC 7591) at `/api/auth/oauth2/register`. A public client (`token_endpoint_auth_method: "none"`) may come back to a loopback address on any port or to an app’s own scheme; a client with a secret, to https only.
+5. The person signs in with Google (a new person makes their account there, and confirms once that they’re 16 or older and agree to the Terms), then sees Tripmo’s allow page: “\<AI> wants to read and change the trips you’re in, as \<name>.” They choose Allow or Don’t allow.
+6. The client exchanges the code at `/api/auth/oauth2/token`. Send `resource=https://app.tripmo.me/mcp` (RFC 8707) when authorizing: without it, the token isn’t one `/mcp` accepts.
 
 ### Scopes
 
-No scope narrows what a connection can do: one connection can do everything the person can, in the trips they're in. The scopes say what the client learns about the person and whether it stays connected. Asking for none gives all four.
+No scope narrows what a connection can do: one connection can do everything the person can, in the trips they’re in. The scopes say what the client learns about the person and whether it stays connected. Asking for none gives all four.
 
 | Scope | What it allows |
 | --- | --- |
 | `openid` | Signs the person in: the token says who they are (`sub`). |
 | `profile` | Their name and picture, in the ID token and from `userinfo`. |
 | `email` | Their email address, in the ID token and from `userinfo`. |
-| `offline_access` | A refresh token, so the AI stays connected after the access token's hour. |
+| `offline_access` | A refresh token, so the AI stays connected after the access token’s hour. |
 
 ### Tokens
 
@@ -69,9 +65,7 @@ No scope narrows what a connection can do: one connection can do everything the 
 - **Authorization code**: Used once, within 10 minutes.
 - **Revoking**: The person disconnects an AI on their Tripmo profile, under Your AIs: its tokens are deleted, it must ask to be allowed again, and any token it was given before is refused at its next call. A client can revoke its own refresh token at `/api/auth/oauth2/revoke`.
 
-<a id="setup"></a>
-
-## Setup
+## <a id="setup"></a>Setup
 
 Any MCP client that speaks Streamable HTTP and OAuth takes the address and does the rest. With Claude Code:
 
@@ -81,35 +75,31 @@ claude mcp add --transport http tripmo https://app.tripmo.me/mcp
 
 Then `/mcp` in Claude Code opens the sign-in. To try the tools by hand, the MCP Inspector (`npx @modelcontextprotocol/inspector`) takes the address with Streamable HTTP and signs in the same way.
 
-For Claude, ChatGPT, Grok, Gemini, Cursor, VS Code and the rest, [Connect your AI](https://tripmo.me/connect) has each one's steps.
+For Claude, ChatGPT, Grok, Gemini, Cursor, VS Code and the rest, [Connect your AI](https://tripmo.me/connect) has each one’s steps.
 
-<a id="tools"></a>
+## <a id="tools"></a>The tools
 
-## The tools
-
-13 tools, as every AI but OpenAI's sees them (see [Hosts that forbid a checkout](#no-checkout)). Each is classed as a **Read** (changes nothing), a **Write** (creates, changes or deletes the person's own data and trips) or a **Sensitive write** (reaches other people: Tripmo's team, or a trip's owner). Beside it are its MCP annotations, as the server sets them.
+13 tools, as every AI but OpenAI’s sees them (see [Hosts that forbid a checkout](#no-checkout)). Each is classed as a **Read** (changes nothing), a **Write** (creates, changes or deletes the person’s own data and trips) or a **Sensitive write** (reaches other people: Tripmo’s team, or a trip’s owner). Beside it are its MCP annotations, as the server sets them.
 
 | Tool | Class | readOnlyHint | destructiveHint | idempotentHint | openWorldHint |
 | --- | --- | --- | --- | --- | --- |
-| [`guide`](#guide) | Read | true | false | _not set_ | false |
-| [`list_trips`](#list_trips) | Read | true | false | _not set_ | false |
-| [`get_trip`](#get_trip) | Read | true | false | _not set_ | false |
-| [`query`](#query) | Read | true | false | _not set_ | false |
-| [`history`](#history) | Read | true | false | _not set_ | false |
-| [`create_trip`](#create_trip) | Write | false | false | false | false |
-| [`add_seats`](#add_seats) | Write | false | false | true | false |
-| [`write`](#write) | Write | false | true | false | true |
-| [`upload_link`](#upload_link) | Write | false | false | false | false |
-| [`attach_file`](#attach_file) | Write | false | false | false | false |
-| [`undo`](#undo) | Write | false | true | false | false |
-| [`join_trip`](#join_trip) | Sensitive write | false | false | true | false |
-| [`send_feedback`](#send_feedback) | Sensitive write | false | false | false | false |
+| [`guide`](#guide) | **Read** | true | false | _not set_ | false |
+| [`list_trips`](#list_trips) | **Read** | true | false | _not set_ | false |
+| [`get_trip`](#get_trip) | **Read** | true | false | _not set_ | false |
+| [`query`](#query) | **Read** | true | false | _not set_ | false |
+| [`history`](#history) | **Read** | true | false | _not set_ | false |
+| [`create_trip`](#create_trip) | **Write** | false | false | false | false |
+| [`add_seats`](#add_seats) | **Write** | false | false | true | false |
+| [`write`](#write) | **Write** | false | true | false | true |
+| [`upload_link`](#upload_link) | **Write** | false | false | false | false |
+| [`attach_file`](#attach_file) | **Write** | false | false | false | false |
+| [`undo`](#undo) | **Write** | false | true | false | false |
+| [`join_trip`](#join_trip) | **Sensitive write** | false | false | true | false |
+| [`send_feedback`](#send_feedback) | **Sensitive write** | false | false | false | false |
 
-A tool answers with one text item, its JSON (`guide`'s is plain text). Every date in it carries its weekday.
+A tool answers with one text item, its JSON (`guide`’s is plain text). Every date in it carries its weekday.
 
-<a id="guide"></a>
-
-### `guide`
+### <a id="guide"></a>`guide`
 
 **Read a guide**
 
@@ -161,9 +151,7 @@ Only the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="list_trips"></a>
-
-### `list_trips`
+### <a id="list_trips"></a>`list_trips`
 
 **List my trips**
 
@@ -215,9 +203,7 @@ Only the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="create_trip"></a>
-
-### `create_trip`
+### <a id="create_trip"></a>`create_trip`
 
 **Create a trip**
 
@@ -252,11 +238,16 @@ Anyone signed in. They become the trip’s owner.
 #### Statuses and refusals
 
 - `needs_payment`: A result, not an error: nothing pays for the trip yet. It carries `pay_url`, `plans_url` and `message`.
-  - What to do: Pass the link on as `message` says. Once it’s paid, the trip is made by itself; then call `list_trips`. Asking again before then gives the same link.
+
+  Pass the link on as `message` says. Once it’s paid, the trip is made by itself; then call `list_trips`. Asking again before then gives the same link.
+
 - `limit_reached`: A plan’s fair use is used up for now (trips started in a day, or active at once). The message says when it frees.
-  - What to do: Tell the person what the message says. Don’t retry before then.
+
+  Tell the person what the message says. Don’t retry before then.
+
 - `forbidden`: Starting trips or buying is paused on the account.
-  - What to do: Tell the person to write to support@tripmo.me, as the message says.
+
+  Tell the person to write to support@tripmo.me, as the message says.
 
 And the ones every tool shares: see [Errors](#errors).
 
@@ -471,9 +462,7 @@ And the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="add_seats"></a>
-
-### `add_seats`
+### <a id="add_seats"></a>`add_seats`
 
 **Add spots to a trip**
 
@@ -488,8 +477,8 @@ The trip’s owner.
 #### Inputs
 
 - `trip` (string, required): The trip id, e.g. “trp_8Kd2…”, from list_trips.
-- `blocks` (integer, 1 to 10, default 1): How many blocks of 5 spots, 1 to 10. 1 if left out.
-- `let_in` (array of string, up to 50): mem_… ids of people asking to join, to let in once it’s paid.
+- `blocks` (integer, 1 to 10, default `1`): How many blocks of 5 spots, 1 to 10. 1 if left out.
+- `let_in` (array of string, up to 50): mem\_… ids of people asking to join, to let in once it’s paid.
 
 #### Output
 
@@ -506,9 +495,12 @@ The trip’s owner.
 #### Statuses and refusals
 
 - `payment_required`: The trip is read-only (its Trip Pass refunded, disputed or being refunded). The message says why and, where its owner can, where to buy a new pass.
-  - What to do: Tell the person what the message says.
+
+  Tell the person what the message says.
+
 - `forbidden`: Someone other than the owner asked, or buying is paused on the account.
-  - What to do: Tell the person what the message says: it names the owner, or says to write to support.
+
+  Tell the person what the message says: it names the owner, or says to write to support.
 
 And the ones every tool shares: see [Errors](#errors).
 
@@ -554,9 +546,7 @@ And the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="join_trip"></a>
-
-### `join_trip`
+### <a id="join_trip"></a>`join_trip`
 
 **Ask to join a trip**
 
@@ -581,15 +571,18 @@ Anyone signed in, with a trip’s join link.
 
 #### Side effects
 
-- Sends the person’s name to the trip’s owner: a notification on the owner’s devices, “&lt;name&gt; asks to join.”, and the request on the trip’s page.
+- Sends the person’s name to the trip’s owner: a notification on the owner’s devices, “\<name> asks to join.”, and the request on the trip’s page.
 - Writes “Asked to join” to the trip’s history.
 
 #### Statuses and refusals
 
 - `forbidden`: The trip is read-only for now (its Trip Pass refunded, disputed or being refunded): “This trip can’t change for now, so nobody new can ask to join it.”
-  - What to do: Tell the person. They can ask again once the trip can change.
+
+  Tell the person. They can ask again once the trip can change.
+
 - `not_found`: The join link was replaced or never existed.
-  - What to do: Ask the person for the trip’s current link.
+
+  Ask the person for the trip’s current link.
 
 And the ones every tool shares: see [Errors](#errors).
 
@@ -622,9 +615,7 @@ And the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="get_trip"></a>
-
-### `get_trip`
+### <a id="get_trip"></a>`get_trip`
 
 **Get a trip**
 
@@ -659,9 +650,12 @@ None. It changes nothing, and nobody is told.
 #### Statuses and refusals
 
 - `forbidden`: The person has asked to join and hasn’t been let in yet.
-  - What to do: Tell them the owner hasn’t let them in yet.
+
+  Tell them the owner hasn’t let them in yet.
+
 - `sign_in`, `not_listed`: A view link shared with a list of emails: the person isn’t signed in with one of them.
-  - What to do: Tell the person what the message says.
+
+  Tell the person what the message says.
 
 And the ones every tool shares: see [Errors](#errors).
 
@@ -693,9 +687,7 @@ And the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="query"></a>
-
-### `query`
+### <a id="query"></a>`query`
 
 **Find records in a trip**
 
@@ -710,7 +702,7 @@ A member of the trip, or, with a view link, whoever it’s shared with (only wha
 #### Inputs
 
 - `trip` (string, required): The trip id, e.g. “trp_8Kd2…”, from list_trips; or a trip shared with your human to view: its view link (“https://…/v/Zq3…”) or just its code.
-- `record` (one of item, interest, link, pad, pad_entry, note, ask, reminder, research, default "item"): What to find: items when left out, or `interest`, `link`, `pad`, `pad_entry`, `note`, `ask`, `reminder`, `research`.
+- `record` (one of `item`, `interest`, `link`, `pad`, `pad_entry`, `note`, `ask`, `reminder`, `research`, default `"item"`): What to find: items when left out, or `interest`, `link`, `pad`, `pad_entry`, `note`, `ask`, `reminder`, `research`.
 - `ids` (array of string, up to 200): Only these ids, up to 200.
 - `item_type` (string, or several): Items of these types: `place`, `goal`, `choice`, `stay`, `move`, `task`, `info`.
 - `status` (string, or several): Items with these statuses.
@@ -719,25 +711,25 @@ A member of the trip, or, with a view link, whoever it’s shared with (only wha
 - `parent` (string): A goal’s candidates or a choice’s options.
 - `item` (string): Records about this item.
 - `near` (object): Within `radius_m` of a point or an item, nearest first.
-- `unrated_by` ("me"): `me`: what waits on the person’s rating.
-- `not_on_map` (true): Items whose location (or a move’s from or to) has a precision but no coordinates yet.
-- `origin` (one of friend, ai, none, or several): Where items came from: “friend” (a friend recommends it), “ai” (an AI’s suggestion), or “none” (a person’s own).
+- `unrated_by` (`"me"`): `me`: what waits on the person’s rating.
+- `not_on_map` (`true`): Items whose location (or a move’s from or to) has a precision but no coordinates yet.
+- `origin` (one of `friend`, `ai`, `none`, or several): Where items came from: “friend” (a friend recommends it), “ai” (an AI’s suggestion), or “none” (a person’s own).
 - `recommended_by` (string, 1 to 100 characters): Items a friend recommends, by the friend’s name.
 - `pad` (string): With record pad_entry: one pad’s entries.
-- `owner` ("me" or string): Tasks owned by “me”, a person or a member (mem_…).
+- `owner` (`"me"` or string): Tasks owned by “me”, a person or a member (mem\_…).
 - `sent` (boolean): With record reminder: false for those still to go (not sent, nor missed), true for those sent.
-- `open_for` ("me"): With record ask: the open asks waiting on me (asked of me, not answered yet).
-- `on` (string): With record note: notes on this item, a finding (rsr_…), the trip’s id, or a member id (mem_…).
+- `open_for` (`"me"`): With record ask: the open asks waiting on me (asked of me, not answered yet).
+- `on` (string): With record note: notes on this item, a finding (rsr\_…), the trip’s id, or a member id (mem\_…).
 - `taken` (boolean): With record pad_entry: false for what’s not in the plan yet.
 - `during` (object): Items whose time touches these days, inclusive: dates, or “day N”.
-- `when_precision` (one of none, days, day, part, window, exact, or several): How precise the time is; “none” finds what has no time yet.
-- `person` ("me" or string): Whose interest or notes; `me` or an id.
-- `tier` (one of no, maybe, yes, or several): A tier, or several: “no” (not interested), “maybe” or “yes” (really want it). Items someone gave it (person, when given), or with record interest the ratings.
-- `going` (one of yes, no, maybe, or several): “yes”, “no” or “maybe”, or several: items someone (person, when given) said it of, or with record interest the ratings.
+- `when_precision` (one of `none`, `days`, `day`, `part`, `window`, `exact`, or several): How precise the time is; “none” finds what has no time yet.
+- `person` (`"me"` or string): Whose interest or notes; `me` or an id.
+- `tier` (one of `no`, `maybe`, `yes`, or several): A tier, or several: “no” (not interested), “maybe” or “yes” (really want it). Items someone gave it (person, when given), or with record interest the ratings.
+- `going` (one of `yes`, `no`, `maybe`, or several): “yes”, “no” or “maybe”, or several: items someone (person, when given) said it of, or with record interest the ratings.
 - `changed_since` (string, an ISO date and time): Changed after this time (ISO).
-- `include` (array of (one of interest, children, links, notes, files, weather)): Adds to each item: `interest`, `children`, `links`, `notes`, `files`, `weather`.
+- `include` (array of (one of `interest`, `children`, `links`, `notes`, `files`, `weather`)): Adds to each item: `interest`, `children`, `links`, `notes`, `files`, `weather`.
 - `fields` (array of string): Only these fields come back.
-- `limit` (integer, 1 to 200, default 50): 1 to 200 a page; 50 if left out.
+- `limit` (integer, 1 to 200, default `50`): 1 to 200 a page; 50 if left out.
 - `cursor` (string): The `next_cursor` of the page before.
 
 #### Output
@@ -1131,13 +1123,11 @@ Only the ones every tool shares: see [Errors](#errors).
 <details>
 <summary>What the AI is told</summary>
 
-> Find records in a trip; on a trip shared with your human to view (its view link or code in trip), the same filters over only what it shares, with viewing true (no pads, friends' tips, questions or reminders). Find items (or, with record "interest", people's interest; with record "link", saved links: item filters them by what they're about, item "none" is the inbox; with record "pad", the trip's pads and their links; with record "pad_entry", what friends wrote: pad and taken filter them; with record "note", people's notes: on (an item, a finding, the trip or a member) and person (the author) filter them; with record "ask", questions with their answers and who they still wait on: open_for "me", item (what it's about), person (who asked), status; with record "reminder", reminders: person (who they reach; "me"), item, sent (a reminder with missed_at fell due while the trip was deleted and wasn't sent); with record "research", what AIs found out: item (what it's about; "none" for the trip in general), text). For tasks, owner ("me", a person or a member) finds whose they are. For items, origin filters where they came from (friend, ai, none). Filters combine: ids, item_type, status, category, text (searches titles and all fields), parent, near (a point or an item, within radius_m; nearest first), during (days, as dates or "day N": everything on day 6), when_precision ("none" for what has no time yet), unrated_by "me" (what waits on my rating, as get_trip's unrated_by_you), person (whose interest; "me" or a person id), tier (one or several of "no" (not interested), "maybe" and "yes" (really want it): what someone, or person when given, said that to; with record "interest", the ratings), going ("yes", "no", "maybe", likewise), changed_since. include ["interest"] adds everyone's interest to each item, ["children"] a goal's candidates or a choice's options (each with the rest of include), ["links"] the links saved about it (as links_found), ["notes"] people's notes on it (as notes_left), ["files"] the files attached to it (name, type, size, and as: "photo" for its own photos), ["weather"] each day's weather beside the items (as weather; for the days during covers, else every day with a place: see guide "days"); fields limits what comes back. Items with a price or payments come with your_currency, as get_trip's. Results are paged: pass next_cursor as cursor.
+> Find records in a trip; on a trip shared with your human to view (its view link or code in trip), the same filters over only what it shares, with viewing true (no pads, friends' tips, questions or reminders). Find items (or, with record "interest", people's interest; with record "link", saved links: item filters them by what they're about, item "none" is the inbox; with record "pad", the trip's pads and their links; with record "pad_entry", what friends wrote: pad and taken filter them; with record "note", people's notes: on (an item, a finding, the trip or a member) and person (the author) filter them; with record "ask", questions with their answers and who they still wait on: open_for "me", item (what it's about), person (who asked), status; with record "reminder", reminders: person (who they reach; "me"), item, sent (a reminder with missed_at fell due while the trip was deleted and wasn't sent); with record "research", what AIs found out: item (what it's about; "none" for the trip in general), text). For tasks, owner ("me", a person or a member) finds whose they are. For items, origin filters where they came from (friend, ai, none). Filters combine: ids, item_type, status, category, text (searches titles and all fields), parent, near (a point or an item, within radius_m; nearest first), during (days, as dates or "day N": everything on day 6), when_precision ("none" for what has no time yet), unrated_by "me" (what waits on my rating, as get_trip's unrated_by_you), person (whose interest; "me" or a person id), tier (one or several of "no" (not interested), "maybe" and "yes" (really want it): what someone, or person when given, said that to; with record "interest", the ratings), going ("yes", "no", "maybe", likewise), changed_since. include \["interest"\] adds everyone's interest to each item, \["children"\] a goal's candidates or a choice's options (each with the rest of include), \["links"\] the links saved about it (as links_found), \["notes"\] people's notes on it (as notes_left), \["files"\] the files attached to it (name, type, size, and as: "photo" for its own photos), \["weather"\] each day's weather beside the items (as weather; for the days during covers, else every day with a place: see guide "days"); fields limits what comes back. Items with a price or payments come with your_currency, as get_trip's. Results are paged: pass next_cursor as cursor.
 
 </details>
 
-<a id="write"></a>
-
-### `write`
+### <a id="write"></a>`write`
 
 **Change a trip**
 
@@ -1175,13 +1165,20 @@ A member of the trip. Letting people in, turning them down or removing them, han
 #### Statuses and refusals
 
 - `conflict`: An update passed `if_version` and the record changed since: “X is at version N, not M”. Also a question already closed.
-  - What to do: Read the record again and write on top of what’s there.
+
+  Read the record again and write on top of what’s there.
+
 - `payment_required`: Letting someone in when the trip is full (the message names `add_seats`), or any change to a read-only trip (its Trip Pass refunded, disputed or being refunded).
-  - What to do: For a full trip, call `add_seats` with `let_in`. For a read-only one, tell the person what the message says.
+
+  For a full trip, call `add_seats` with `let_in`. For a read-only one, tell the person what the message says.
+
 - `forbidden`: An owner’s change by someone else, someone else’s record, or deleting the trip (the message gives the web link).
-  - What to do: Tell the person, in the message’s words.
+
+  Tell the person, in the message’s words.
+
 - `invalid`: An operation is malformed. The message starts with its number: “operation 3: …”. Nothing was applied.
-  - What to do: Fix that operation and send the whole batch again.
+
+  Fix that operation and send the whole batch again.
 
 And the ones every tool shares: see [Errors](#errors).
 
@@ -2682,56 +2679,54 @@ And the ones every tool shares: see [Errors](#errors).
 <summary>What the AI is told</summary>
 
 > Change one trip: a batch of operations applied all or nothing (if one is refused, none apply), saved as one change in its history.
-
+>
 > It creates, updates and deletes that trip's records, only those this person may: items (place, goal, choice, stay, move, task, info), their own interest, notes, links, research, questions and answers, reminders, a friend's recommendations pad; the trip's details and its members (some only for the owner); and it removes files. An update overwrites the fields it sets: pass if_version from your read, and it's refused if the record changed since. This person can take a write back with undo, unless what it touched changed since or it changed who's in the trip, its owner, its join link or a pad's link. It can't delete the trip, add a file (upload_link, attach_file) or change another trip. It fetches the photos and links it saves from the web, to check them and show previews.
-
+>
 > - create item: {op:"create", type:"item", ref?, fields:{type, title, ...}}. type is place, goal, choice, stay, move, task or info.
-
+>
 > - set my interest: {op:"create", type:"interest", fields:{item, tier?, going?}}; tier is "no" (not interested), "maybe" or "yes" (really want it), going "yes", "no" or "maybe"; writing it again updates it. The others hear about my ratings and new notes, gathered once I pause.
-
+>
 > - a to-do: {op:"create", type:"item", fields:{type:"task", title, owner?, due?, important?}}; owner is a member or person id (they're notified); its due date reminds the owner (everyone, when there's none) 3 days before, on the day and the day after, at 9:00 their time; important:true when missing it costs money or the trip (everyone hears of it and its changes; see guide "todos"); done with {op:"update", id, set:{status:"done"}}.
-
-> - a reminder Tripmo sends at its exact time (a notification on their devices, and an email), for a moment such as tickets going on sale; a due date needs none: {op:"create", type:"reminder", ref?, fields:{at:"2026-11-18T06:00", tz:"Asia/Singapore", to: "everyone" or [member ids], about?, text}}; at is local time in tz.
-
-> - ask people a question: {op:"create", type:"ask", ref?, fields:{to: "everyone" or [member ids], about?, text, options?}}; close it {op:"update", id:"ask_…", set:{status:"closed"}} (only its author).
-
+>
+> - a reminder Tripmo sends at its exact time (a notification on their devices, and an email), for a moment such as tickets going on sale; a due date needs none: {op:"create", type:"reminder", ref?, fields:{at:"2026-11-18T06:00", tz:"Asia/Singapore", to: "everyone" or \[member ids\], about?, text}}; at is local time in tz.
+>
+> - ask people a question: {op:"create", type:"ask", ref?, fields:{to: "everyone" or \[member ids\], about?, text, options?}}; close it {op:"update", id:"ask\_…", set:{status:"closed"}} (only its author).
+>
 > - answer a question asked of you: {op:"create", type:"answer", fields:{ask, choice?, text?}}; writing it again changes your answer.
-
-> - write a note (yours, attributed to you): {op:"create", type:"note", fields:{on, text}}; on is an item (or $ref), a finding (rsr_…), the trip's id, or a member id. Only you can change ({op:"update", id:"nte_…", set:{text}}) or delete yours.
-
-> - save a link: {op:"create", type:"link", ref?, fields:{url, note?, items?}}; items are the places, goals or options it's about (ids or $refs); without items it waits in the inbox. Attach later with {op:"update", id:"lnk_…", set:{items:[…]}}.
-
+>
+> - write a note (yours, attributed to you): {op:"create", type:"note", fields:{on, text}}; on is an item (or $ref), a finding (rsr\_…), the trip's id, or a member id. Only you can change ({op:"update", id:"nte\_…", set:{text}}) or delete yours.
+>
+> - save a link: {op:"create", type:"link", ref?, fields:{url, note?, items?}}; items are the places, goals or options it's about (ids or $refs); without items it waits in the inbox. Attach later with {op:"update", id:"lnk\_…", set:{items:\[…\]}}.
+>
 > - save research (what you found out that isn't one place; shared, anyone's AI adds to it): {op:"create", type:"research", ref?, fields:{title, text, sources?, about?}}; text as short bullets, about the items it concerns. See guide "research".
-
+>
 > - a stay: {op:"create", type:"item", fields:{type:"stay", title, status?, where:{precision:"spot", name, address, city, lat, lng}, when:{precision:"days", start: check-in, end: check-out}}}; city on every stay, the city or town as people say it, never the ward or the prefecture ("Tokyo" for Oimachi, Shinagawa; "Ikaho", not Gunma; "Seoul", not Jung-gu): it heads the stay's group on the map. See guide "stays".
-
-> - photos of a place, stay or option: fields photos:[{url, source, credit}], up to five pictures from the web, the best first, checked when written; refused ones come back in hints (photo_refused). See guide "photos".
-
-> - who paid for something, and how: fields paid:[{by, amount, currency, method}]; method in a few words, the card by name ("Visa", "Mei's Visa", "Cash", "Bank transfer", "Citi Prestige points"), never its digits. A card on file charged later, on a day ("your card will be charged on 1 Nov"): charges:[{by, amount, currency, method, on}], not paid. See guide "money".
-
+>
+> - photos of a place, stay or option: fields photos:\[{url, source, credit}\], up to five pictures from the web, the best first, checked when written; refused ones come back in hints (photo_refused). See guide "photos".
+>
+> - who paid for something, and how: fields paid:\[{by, amount, currency, method}\]; method in a few words, the card by name ("Visa", "Mei's Visa", "Cash", "Bank transfer", "Citi Prestige points"), never its digits. A card on file charged later, on a day ("your card will be charged on 1 Nov"): charges:\[{by, amount, currency, method, on}\], not paid. See guide "money".
+>
 > - update: {op:"update", id, if_version?, set?, unset?}; keys may be dotted one level ("when.start").
-
+>
 > Item types: place, goal (a want with candidates under it), choice (options under it: stays or moves with status "option"), stay, move, task, info.
-
+>
 > - delete: {op:"delete", id}; soft, kept in history.
-
+>
 > The trip and its members (ids from get_trip):
-
-> - edit the trip: {op:"update", id:&lt;trip id&gt;, set:{title?, brief?, dates?, budget?}}; anyone in the trip.
-
-> - owner only: let someone in {op:"update", id:"mem_…", set:{status:"member"}}; if a let-in is refused because the trip is full, call add_seats; turn down or remove {op:"delete", id:"mem_…"}; hand over {op:"update", id:&lt;trip id&gt;, set:{owner:"mem_…"}}; new join link {op:"update", id:&lt;trip id&gt;, set:{join_link:"new"}}.
-
+>
+> - edit the trip: {op:"update", id:\<trip id>, set:{title?, brief?, dates?, budget?}}; anyone in the trip.
+>
+> - owner only: let someone in {op:"update", id:"mem\_…", set:{status:"member"}}; if a let-in is refused because the trip is full, call add_seats; turn down or remove {op:"delete", id:"mem\_…"}; hand over {op:"update", id:\<trip id>, set:{owner:"mem\_…"}}; new join link {op:"update", id:\<trip id>, set:{join_link:"new"}}.
+>
 > - deleting the trip isn't a write: only its owner deletes it, on the web (Trip settings), so an AI's mistake can't lose one.
-
-> - leave: delete your own member id (the owner hands over first). Your profile (what you like, what you want in a stay: notes and data of your own): {op:"update", id:&lt;your mem id&gt;, set:{"profile.likes":"ramen, quiet temples"}}. Your currency is your account's, for every trip (get_trip's your_currency); "profile.currency" sets another for this trip alone (see guide "money"). Stop sharing your location: {op:"update", id:&lt;your mem id&gt;, set:{sharing_location:false}}.
-
+>
+> - leave: delete your own member id (the owner hands over first). Your profile (what you like, what you want in a stay: notes and data of your own): {op:"update", id:\<your mem id>, set:{"profile.likes":"ramen, quiet temples"}}. Your currency is your account's, for every trip (get_trip's your_currency); "profile.currency" sets another for this trip alone (see guide "money"). Stop sharing your location: {op:"update", id:\<your mem id>, set:{sharing_location:false}}.
+>
 > Returns the new ids and versions, the url of what changed (its card, the finding, or else the trip), not_on_map (what this write left with a location but no coordinates, to look up and send), hints (what it left looking like a common mistake, or what changing the trip's dates does to what's in it: things on relative days moving with its first day, things now outside its dates; to raise with your human), and your_currency when it set or took off your "profile.currency" (what's in use now, and a note to tell your human). Before writing a kind of thing for the first time, read its guide.
 
 </details>
 
-<a id="upload_link"></a>
-
-### `upload_link`
+### <a id="upload_link"></a>`upload_link`
 
 **Attach a file, through a link or your sandbox**
 
@@ -2746,8 +2741,8 @@ A member of the trip, on its items.
 #### Inputs
 
 - `trip` (string, required): The trip id, e.g. “trp_8Kd2…”, from list_trips.
-- `record` (string, required): The item (itm_…) the file goes on.
-- `as` (one of file, photo): Leave it out, or “file”, for a ticket, a confirmation, a screenshot or a QR code. “photo” only when your human says it’s a picture of the place (an image): it then shows as the item’s photo.
+- `record` (string, required): The item (itm\_…) the file goes on.
+- `as` (one of `file`, `photo`): Leave it out, or “file”, for a ticket, a confirmation, a screenshot or a QR code. “photo” only when your human says it’s a picture of the place (an image): it then shows as the item’s photo.
 
 #### Output
 
@@ -2763,7 +2758,8 @@ A member of the trip, on its items.
 #### Statuses and refusals
 
 - `forbidden`: The record is a travel document: those, and their files, are kept in the Tripmo app only.
-  - What to do: Tell the person to add the file there, in the app.
+
+  Tell the person to add the file there, in the app.
 
 And the ones every tool shares: see [Errors](#errors).
 
@@ -2805,18 +2801,16 @@ And the ones every tool shares: see [Errors](#errors).
 <summary>What the AI is told</summary>
 
 > Attach a file (a ticket PDF, a booking screenshot, a QR code) to an item; or, with as "photo", a picture of a place, stay or option that your human says is of it, shown as its photo. Only when your human asks, with a file they gave you. If your host passes files to tools (ChatGPT), use attach_file instead. Returns put_url and url:
-
-> - With a shell that reaches the internet (Claude's code tool, Claude Code, Codex), send the file's bytes yourself: curl -fsS -T &lt;file&gt; -H "X-File-Name: &lt;name&gt;" "&lt;put_url&gt;". It takes one file, within 10 minutes, and replies with it.
-
-> - Otherwise, or if that fails, give your human url: it opens that record's card on the web with the upload ready. On Claude, when your sandbox couldn't reach app.tripmo.me, also tell them they can allow it (Settings &gt; Capabilities, code execution's allowed domains) so files go straight in next time.
-
-> Never paste a file's contents (base64) into a call. PDF or an image, up to 20 MB. More in guide "files". To list a record's files, query with include ["files"]; to remove one, write {op:"delete", id:"fil_…"}.
+>
+> - With a shell that reaches the internet (Claude's code tool, Claude Code, Codex), send the file's bytes yourself: curl -fsS -T \<file> -H "X-File-Name: \<name>" "\<put_url>". It takes one file, within 10 minutes, and replies with it.
+>
+> - Otherwise, or if that fails, give your human url: it opens that record's card on the web with the upload ready. On Claude, when your sandbox couldn't reach app.tripmo.me, also tell them they can allow it (Settings > Capabilities, code execution's allowed domains) so files go straight in next time.
+>
+> Never paste a file's contents (base64) into a call. PDF or an image, up to 20 MB. More in guide "files". To list a record's files, query with include \["files"\]; to remove one, write {op:"delete", id:"fil\_…"}.
 
 </details>
 
-<a id="attach_file"></a>
-
-### `attach_file`
+### <a id="attach_file"></a>`attach_file`
 
 **Attach a file from the chat**
 
@@ -2831,9 +2825,9 @@ A member of the trip, on its items.
 #### Inputs
 
 - `trip` (string, required): The trip id, e.g. “trp_8Kd2…”, from list_trips.
-- `record` (string, required): The item (itm_…) the file goes on.
+- `record` (string, required): The item (itm\_…) the file goes on.
 - `file` (object, required): The file the person attached in the chat: `download_url` and `file_id`, with `mime_type` and `file_name` where known. The host fills it in.
-- `as` (one of file, photo): Leave it out, or “file”, for a ticket, a confirmation, a screenshot or a QR code. “photo” only when your human says it’s a picture of the place (an image): it then shows as the item’s photo.
+- `as` (one of `file`, `photo`): Leave it out, or “file”, for a ticket, a confirmation, a screenshot or a QR code. “photo” only when your human says it’s a picture of the place (an image): it then shows as the item’s photo.
 
 #### Output
 
@@ -2850,9 +2844,12 @@ A member of the trip, on its items.
 #### Statuses and refusals
 
 - `file_not_passed`: The file didn’t come with the call (ChatGPT’s phone apps don’t pass files yet), or Tripmo couldn’t fetch it. The message has a link.
-  - What to do: Give the person the link: it opens the record’s card with the upload ready.
+
+  Give the person the link: it opens the record’s card with the upload ready.
+
 - `payment_required`: The trip is read-only.
-  - What to do: Tell the person what the message says.
+
+  Tell the person what the message says.
 
 And the ones every tool shares: see [Errors](#errors).
 
@@ -2922,9 +2919,7 @@ And the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="history"></a>
-
-### `history`
+### <a id="history"></a>`history`
 
 **See what changed**
 
@@ -2941,9 +2936,9 @@ A member of the trip.
 - `trip` (string, required): The trip id, e.g. “trp_8Kd2…”, from list_trips.
 - `since` (string, an ISO date and time): Changes at or after this time.
 - `until` (string, an ISO date and time): Changes before this time.
-- `by` (string): Whose changes: “me”, a person id, or a member id (mem_…).
+- `by` (string): Whose changes: “me”, a person id, or a member id (mem\_…).
 - `record` (string): Only changes that touched or mention this record: any record’s id (an item, a member, a note, a finding…).
-- `limit` (integer, 1 to 100, default 30): 1 to 100 a page; 30 if left out.
+- `limit` (integer, 1 to 100, default `30`): 1 to 100 a page; 30 if left out.
 - `cursor` (string): The `next_cursor` of the page before.
 
 #### Output
@@ -3017,9 +3012,7 @@ Only the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="undo"></a>
-
-### `undo`
+### <a id="undo"></a>`undo`
 
 **Undo a change**
 
@@ -3034,7 +3027,7 @@ A member of the trip, on their own changes.
 #### Inputs
 
 - `trip` (string, required): The trip id, e.g. “trp_8Kd2…”, from list_trips.
-- `change` (string, required): The change id, “chg_…”.
+- `change` (string, required): The change id, “chg\_…”.
 
 #### Output
 
@@ -3043,16 +3036,21 @@ A member of the trip, on their own changes.
 
 #### Side effects
 
-- One change in the trip’s history, “Undo: &lt;reason&gt;”, told to the others as a write is.
+- One change in the trip’s history, “Undo: \<reason>”, told to the others as a write is.
 
 #### Statuses and refusals
 
 - `conflict`: Something it touched changed since, or it was already undone.
-  - What to do: Read the records again and change them with `write` instead.
+
+  Read the records again and change them with `write` instead.
+
 - `invalid`: It changed who’s in the trip, handed the trip over, or replaced a link: those can’t be undone.
-  - What to do: Change the records directly with `write`.
+
+  Change the records directly with `write`.
+
 - `forbidden`: It’s someone else’s change.
-  - What to do: Only they can undo it. Tell the person.
+
+  Only they can undo it. Tell the person.
 
 And the ones every tool shares: see [Errors](#errors).
 
@@ -3089,9 +3087,7 @@ And the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="send_feedback"></a>
-
-### `send_feedback`
+### <a id="send_feedback"></a>`send_feedback`
 
 **Send Tripmo feedback**
 
@@ -3105,7 +3101,7 @@ Anyone signed in.
 
 #### Inputs
 
-- `kind` (one of bug, idea, other, required): “bug”: something in Tripmo broken or wrong; “idea”: something they wish it did; “other”: anything else.
+- `kind` (one of `bug`, `idea`, `other`, required): “bug”: something in Tripmo broken or wrong; “idea”: something they wish it did; “other”: anything else.
 - `text` (string, 1 to 5,000 characters, required): What your human said, in their own words: what happened, where (which trip, view or record), and what they expected. Up to 5,000 characters.
 - `trip` (string): The trip it’s about, when it’s about one (an id from list_trips).
 
@@ -3122,7 +3118,8 @@ Anyone signed in.
 #### Statuses and refusals
 
 - `limit_reached`: The person has sent 10 today, through their AIs and on the web together.
-  - What to do: Tell them to write to support@tripmo.me, as the message says.
+
+  Tell them to write to support@tripmo.me, as the message says.
 
 And the ones every tool shares: see [Errors](#errors).
 
@@ -3170,9 +3167,7 @@ And the ones every tool shares: see [Errors](#errors).
 
 </details>
 
-<a id="errors"></a>
-
-## Errors
+## <a id="errors"></a>Errors
 
 A tool that refuses answers a normal result with `isError: true` and one text item, `<code>: <message>`. The message says what went wrong and what to do, in words meant for the AI to act on and pass on.
 
@@ -3191,86 +3186,89 @@ A tool that refuses answers a normal result with `isError: true` and one text it
 ### What every tool may answer
 
 - `terms_needed`: The person signed up through their AI but hasn’t yet confirmed they’re 16 or older and agreed to the Terms. Every tool answers this, with the link, and does nothing else.
-  - What to do: Give the person the link. They agree once on the web, then the AI calls again.
-- `invalid`: An input breaks a rule the schema can’t say (a date range backwards, an unknown id prefix, a field on the wrong kind of record).
-  - What to do: Read the message, fix the input and call again.
-- `not_found`: The trip, record or change doesn’t exist, or the person isn’t in that trip. The two are answered the same.
-  - What to do: Call `list_trips` or read again for the right id.
-- `forbidden`: The person may not do this: an owner’s change by someone else, someone else’s note, a trip they’ve only asked to join, or what’s kept in the Tripmo app only (travel documents, diet and mobility).
-  - What to do: Tell the person why, in the message’s words. Don’t retry.
-- `gone`: The trip was deleted by its owner. The message says who and until when it can be restored.
-  - What to do: Tell the person. Only the owner can restore it, on the web.
-- `view_only`: A view link (`…/v/…`) was given to a tool other than `get_trip` and `query`. A trip shared to view can’t be changed, joined, attached to or undone.
-  - What to do: Read it with `get_trip` and `query`. Write only to the person’s own trips, and only what they ask for.
-- `internal`: Something failed on Tripmo’s side. It is logged.
-  - What to do: Try again once. If it keeps failing, tell the person; they can report it with `send_feedback`.
 
-Each tool's own are under it. An argument its schema refuses answers `isError: true` with `Input validation error: …`, before the tool runs; an unknown tool is a JSON-RPC error, `-32602`.
+  Give the person the link. They agree once on the web, then the AI calls again.
+
+- `invalid`: An input breaks a rule the schema can’t say (a date range backwards, an unknown id prefix, a field on the wrong kind of record).
+
+  Read the message, fix the input and call again.
+
+- `not_found`: The trip, record or change doesn’t exist, or the person isn’t in that trip. The two are answered the same.
+
+  Call `list_trips` or read again for the right id.
+
+- `forbidden`: The person may not do this: an owner’s change by someone else, someone else’s note, a trip they’ve only asked to join, or what’s kept in the Tripmo app only (travel documents, diet and mobility).
+
+  Tell the person why, in the message’s words. Don’t retry.
+
+- `gone`: The trip was deleted by its owner. The message says who and until when it can be restored.
+
+  Tell the person. Only the owner can restore it, on the web.
+
+- `view_only`: A view link (`…/v/…`) was given to a tool other than `get_trip` and `query`. A trip shared to view can’t be changed, joined, attached to or undone.
+
+  Read it with `get_trip` and `query`. Write only to the person’s own trips, and only what they ask for.
+
+- `internal`: Something failed on Tripmo’s side. It is logged.
+
+  Try again once. If it keeps failing, tell the person; they can report it with `send_feedback`.
+
+Each tool’s own are under it. An argument its schema refuses answers `isError: true` with `Input validation error: …`, before the tool runs; an unknown tool is a JSON-RPC error, `-32602`.
 
 ### Before any tool runs
 
 | Status | When | What a client does |
 | --- | --- | --- |
-| 401 | No token, or one that isn't valid, has expired, was given before the person disconnected this AI, or belongs to an account being deleted or suspended. `WWW-Authenticate` says where the resource's metadata is (or `error="invalid_token"` with why). | Refresh the token, or sign in again. |
-| 400 | The body isn't JSON-RPC: `-32700`, Parse error. | Fix the request. |
+| 401 | No token, or one that isn’t valid, has expired, was given before the person disconnected this AI, or belongs to an account being deleted or suspended. `WWW-Authenticate` says where the resource’s metadata is (or `error="invalid_token"` with why). | Refresh the token, or sign in again. |
+| 400 | The body isn’t JSON-RPC: `-32700`, Parse error. | Fix the request. |
 | 405 | `GET` or `DELETE`: the server keeps no stream or session. | Send every message as a `POST`. |
-| 406 | `Accept` doesn't name both `application/json` and `text/event-stream`. | Send both. |
+| 406 | `Accept` doesn’t name both `application/json` and `text/event-stream`. | Send both. |
 | 413 | The body is over 4 MB. | Send the change in parts: several writes. |
 | 429 | Too many calls: see [Rate limits](#rate-limits). | Wait for `Retry-After`. |
 
-There is no `403` on `/mcp`: no scope gates a tool, and what a person may not do comes back as that tool's `forbidden`.
+There is no `403` on `/mcp`: no scope gates a tool, and what a person may not do comes back as that tool’s `forbidden`.
 
-<a id="rate-limits"></a>
+## <a id="rate-limits"></a>Rate limits
 
-## Rate limits
-
-Tripmo counts calls by who makes them, never by the address an AI calls from: every person of a hosted AI calls from its few addresses. Cloudflare's rule by address covers only the pages a person's own browser opens.
+Tripmo counts calls by who makes them, never by the address an AI calls from: every person of a hosted AI calls from its few addresses. Cloudflare’s rule by address covers only the pages a person’s own browser opens.
 
 | What | Limit | Past it |
 | --- | --- | --- |
 | Calls to `/mcp`, per access token | 120 a minute: that many at once, then 2 a second. | 429, a JSON-RPC error `-32000`, “Too many calls to Tripmo from this AI in a minute. Try again in 20 s.”, and `Retry-After` in seconds. |
 | Calls to `/mcp`, per person | 240 a minute across all their AIs. | The same, “from your AIs”. |
-| Registering a client | 1,000 a day per address. A Client ID Metadata Document never registers, so it isn't counted. | 429, `{"error": "rate_limited", "error_description": …}`, and `Retry-After`. |
-| Sign-in's pages under `/api/auth/` | 50 requests in 10 seconds per address, at Cloudflare. Not the token, introspection, revocation, userinfo or key endpoints, nor the discovery documents, which are never limited by address. | 429 from Cloudflare for 10 seconds. |
+| Registering a client | 1,000 a day per address. A Client ID Metadata Document never registers, so it isn’t counted. | 429, `{"error": "rate_limited", "error_description": …}`, and `Retry-After`. |
+| Sign-in’s pages under `/api/auth/` | 50 requests in 10 seconds per address, at Cloudflare. Not the token, introspection, revocation, userinfo or key endpoints, nor the discovery documents, which are never limited by address. | 429 from Cloudflare for 10 seconds. |
 | Feedback | 10 a day per person, through their AIs and on the web together. | `send_feedback` answers `limit_reached`. |
-| Starting trips | A plan's fair use: so many a day and active at once. | `create_trip` answers `limit_reached`, saying when it frees. |
+| Starting trips | A plan’s fair use: so many a day and active at once. | `create_trip` answers `limit_reached`, saying when it frees. |
 
 A `write` takes up to 200 operations and a body of up to 4 MB; a file, up to 20 MB.
 
-<a id="paying"></a>
-
-## Paying
+## <a id="paying"></a>Paying
 
 No tool charges anyone, and no tool sees a card. Connecting and joining a trip are free; whoever starts a trip pays for it once, with a Trip Pass or Frequent Flyer ([pricing](https://tripmo.me/pricing)).
 
 - `create_trip` answers `needs_payment` when nothing pays for the trip yet, and `add_seats` always does for a trip with a limit. Each carries `pay_url`, a Stripe Checkout page the person opens and completes themselves, open for 24 hours.
-- Once it's paid, Tripmo makes the trip, or adds the spots, by itself. The AI calls `list_trips` or `get_trip` to see it.
+- Once it’s paid, Tripmo makes the trip, or adds the spots, by itself. The AI calls `list_trips` or `get_trip` to see it.
 - `write`, `undo`, `attach_file` and `add_seats` answer `payment_required` for a trip that is full (letting someone in) or read-only (its Trip Pass refunded or disputed). The message says what the person can do.
 
-<a id="no-checkout"></a>
+### <a id="no-checkout"></a>Hosts that forbid a checkout
 
-### Hosts that forbid a checkout
-
-OpenAI's directory forbids a link to a checkout. So to ChatGPT and Codex (known by their Client ID Metadata Documents on `chatgpt.com`) no answer carries a pay link, a price or a plan list:
+OpenAI’s directory forbids a link to a checkout. So to ChatGPT and Codex (known by their Client ID Metadata Documents on `chatgpt.com`) no answer carries a pay link, a price or a plan list:
 
 - `create_trip` answers `needs_payment` with `plans_url` (tripmo.me/pricing) and `message`, and starts nothing. Once the account has a Trip Pass, the same call starts the trip.
-- `add_seats` is listed as “Room for more people”, read-only (`readOnlyHint: true`), with only `trip`: it says how many spots the trip has, and buys nothing.
-- Refusals that would name a price or a link say instead what the account doesn't have, with tripmo.me/pricing. The person pays in Tripmo's app, and the AI's next call works.
+- `add_seats` isn’t listed, since there it could add nothing. A let-in refused because the trip is full says so, with tripmo.me/pricing, and `get_trip`’s `seats` still gives the spots used and the limit.
+- Refusals that would name a price or a link say instead what the account doesn’t have, with tripmo.me/pricing. The person pays in Tripmo’s app, and the AI’s next call works.
 
-<a id="data"></a>
+## <a id="data"></a>Your data
 
-## Your data
-
-- A connection reads and changes only what its person can: the trips they're in, and the trips shared with them to view, which it can only read. Nothing else in Tripmo.
-- For a connected AI, Tripmo keeps its name and client id, when it was allowed and when it was last used, and its tokens. Every change a person's AI makes is recorded in the trip's history with the AI's name.
-- Tripmo never sees the person's chats with their AI: only the calls it makes.
-- Travel documents (passports, visas, insurance and the rest, with their files) and a person's diet and mobility are kept in the Tripmo app only: no tool reads or writes them, and a call that tries is refused (`forbidden`).
+- A connection reads and changes only what its person can: the trips they’re in, and the trips shared with them to view, which it can only read. Nothing else in Tripmo.
+- For a connected AI, Tripmo keeps its name and client id, when it was allowed and when it was last used, and its tokens. Every change a person’s AI makes is recorded in the trip’s history with the AI’s name.
+- Tripmo never sees the person’s chats with their AI: only the calls it makes.
+- Travel documents (passports, visas, insurance and the rest, with their files) and a person’s diet and mobility are kept in the Tripmo app only: no tool reads or writes them, and a call that tries is refused (`forbidden`).
 - The person disconnects an AI on their profile, under Your AIs, and deletes their account and data there too.
 
 [Privacy](https://tripmo.me/privacy) · [Terms](https://tripmo.me/terms)
 
-<a id="support"></a>
-
-## Support
+## <a id="support"></a>Support
 
 Write to [support@tripmo.me](mailto:support@tripmo.me). A person can also report a problem through their AI (`send_feedback`) or with Send feedback on their profile. A person reads every message.
