@@ -1,5 +1,6 @@
 {
   "name": "tripmo",
+  "version": "1.0.0",
   "description": "A shared trip plan for your group: everyone's AI adds places, stays and bookings to one map.",
   "author": {
     "name": "Out There Studio Pte. Ltd."
