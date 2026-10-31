@@ -5,5 +5,8 @@
     "name": "Out There Studio Pte. Ltd."
   },
   "homepage": "https://tripmo.me",
-  "documentationUrl": "https://tripmo.me/docs/mcp"
+  "documentationUrl": "https://tripmo.me/docs/mcp",
+  "supportUrl": "https://tripmo.me/help",
+  "privacyPolicyUrl": "https://tripmo.me/privacy",
+  "termsOfServiceUrl": "https://tripmo.me/terms"
 }
