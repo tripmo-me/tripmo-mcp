@@ -6,6 +6,7 @@
   },
   "homepage": "https://tripmo.me",
   "documentationUrl": "https://tripmo.me/docs/mcp",
+  "icon": "./logo.png",
   "supportUrl": "https://tripmo.me/help",
   "privacyPolicyUrl": "https://tripmo.me/privacy",
   "termsOfServiceUrl": "https://tripmo.me/terms"
